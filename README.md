@@ -13,6 +13,8 @@ Throughout the development of the OopsFix design report, our team maintained act
 Each team member contributed to different sections of the project: some focused on technical modeling (ER diagram and collaboration diagrams), while others worked on the system logic and GUI layout. We collectively reviewed all materials to ensure consistency and quality across the document. One challenge we encountered was coordinating our work across varying schedules, especially when developing the pseudo-code and system diagrams. We resolved this by using shared documents and asynchronous check-ins. Overall, the project was a strong example of balanced teamwork, and we are proud of the system design and documentation we’ve delivered together.
 
 Please let us know if further clarification is needed, and we look forward to your feedback.
+
 Sincerely,
+
 Team G
 

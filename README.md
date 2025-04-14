@@ -5,9 +5,11 @@ Project Name: OopsFix – AI-Powered Cooperative Text Editor
 Date: April 13, 2025
 
 To: Prof. Jie Wei
+
 From: Team G
 
 Subject: Group Memo – Design Report Submission
+
 
 Throughout the development of the OopsFix design report, our team maintained active collaboration through regular group meetings and task coordination. The team worked together to break down the project requirements and assign responsibilities based on individual strengths and availability. We held weekly planning sessions—both in person and online—where we discussed project goals, clarified requirements, and set internal deadlines for each phase of the report.
 

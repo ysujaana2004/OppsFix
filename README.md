@@ -5,7 +5,6 @@ Project Name: OopsFix – AI-Powered Cooperative Text Editor
 Date: April 13, 2025
 
 To: Prof. Jie Wei
-
 From: Team G
 
 Subject: Group Memo – Design Report Submission

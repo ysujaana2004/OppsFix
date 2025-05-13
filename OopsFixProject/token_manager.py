@@ -6,7 +6,7 @@ class TokenManager:
     
     # access tokens
     def get_tokens(self):
-        return self._tokens
+        return self.user.tokens
 
     # check if user has <cost> tokens
     def has_tokens(self, cost):

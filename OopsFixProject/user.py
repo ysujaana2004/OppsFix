@@ -1,5 +1,6 @@
 import time
 from token_manager import TokenManager
+
 # General user class 
 class User:
     def __init__(self, name):
@@ -7,10 +8,14 @@ class User:
         self.corrections = []
         self.submissions = []
 
+    def record_correction(self, original, corrected):
+        self.corrections.append((original, corrected))
+
 class FreeUser(User):
     def __init__(self, name):
         super().__init__(name)
         self.last_submission_time = 0
+        self.token_manager = TokenManager(self)
 
     def can_submit(self, text):
         word_count = len(text.split())
@@ -38,6 +43,7 @@ class PaidUser(User):
         self.blacklist_suggestions = []
         self.borrowed_tokens = 0
         self.borrowed_time = None
+        self.accepted_corrections = []
 
     def has_enough_tokens(self, cost):
         return self.tokens >= cost
@@ -51,9 +57,6 @@ class PaidUser(User):
 
     def add_tokens(self, amount):
         self.tokens += amount
-
-    def record_correction(self, original, corrected):
-        self.corrections.append((original, corrected))
     
     def submit_text(self, text):
         word_count = len(text.split())

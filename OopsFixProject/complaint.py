@@ -1,4 +1,3 @@
-
 from enum import Enum, auto
 from datetime import datetime
 from typing import Optional

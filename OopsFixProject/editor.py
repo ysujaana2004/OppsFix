@@ -2,34 +2,78 @@
 
 from blacklist import filter_blacklisted_words
 from llm import correct_text
+from user import PaidUser
 import difflib
+import math
+import os
 
 class Editor:
     def __init__(self, user):
         self.user = user
 
     def display_corrections(self):
-        """
-        Displays user’s correction history
-        """
         print("Correction History:")
-        for i, (orig, corr) in enumerate(self.user.corrections):
-            print(f"{i+1}. \"{orig}\" → \"{corr}\"")
 
-    def accept_self_correction(self, original, corrected):
-        """
-        For manual (self) correction: applies, records, charges half-token per word changed
-        """
-        words_changed = len(corrected.split())  # rough approximation
-        cost = words_changed // 2
+        # Display accepted LLM suggestions
+        if hasattr(self.user, 'accepted_corrections') and self.user.accepted_corrections:
+            print("\n🔁 Accepted LLM Corrections:")
+            for i, (orig, sugg) in enumerate(self.user.accepted_corrections, 1):
+                print(f"{i}. \"{orig}\" → \"{sugg}\"")
 
-        if hasattr(self.user, 'token_manager') and self.user.token_manager.deduct_tokens(cost):
-            self.user.record_correction(original, corrected)
-            print(f"Self-correction accepted. {cost} tokens deducted.")
-            return True
-        else:
-            print("Not enough tokens to apply self-correction.")
-            return False
+        # Display full-text self-corrections
+        if hasattr(self.user, 'corrections') and self.user.corrections:
+            print("\n✍️ Self-Corrections (full document):")
+            for i, (orig, sugg) in enumerate(self.user.corrections, 1):
+                print(f"{i}. \"{orig}\" → \"{sugg}\"")
+
+        # Nothing recorded
+        if (not getattr(self.user, 'accepted_corrections', []) and
+            not getattr(self.user, 'corrections', [])):
+            print("No corrections recorded.")
+
+
+    def self_correction_mode(self, original_text):
+        """
+        Lets the user manually correct their text.
+        Charges 0.5 tokens per difference (rounded up).
+        """
+        print("\n✍️ Self-Correction Mode:")
+        print("Original:\n", original_text)
+        print("\nMake your corrections below:\n")
+
+        corrected = input("Corrected Version:\n").strip()
+        if not corrected:
+            print("⚠️ No correction entered.")
+            return original_text
+
+        # Use difflib to count meaningful changes
+        orig_words = original_text.strip().split()
+        corr_words = corrected.strip().split()
+
+        sm = difflib.SequenceMatcher(None, orig_words, corr_words)
+        diffs = [tag for tag, _, _, _, _ in sm.get_opcodes() if tag != "equal"]
+        num_changes = len(diffs)
+
+        cost = math.ceil(num_changes * 0.5)
+
+        if num_changes == 0:
+            print("✅ No changes detected. No tokens charged.")
+            return original_text
+
+        if hasattr(self.user, 'token_manager'):
+            if isinstance(self.user, PaidUser):
+                if self.user.token_manager.deduct_tokens(cost):
+                    self.user.record_correction(original_text, corrected)
+                    print(f"✅ Self-correction accepted. {cost} tokens deducted.")
+                    return corrected
+                else:
+                    print("❌ Not enough tokens for self-correction.")
+                    return original_text
+            else:
+                # FreeUser: no deduction
+                self.user.record_correction(original_text, corrected)
+                print("✅ Self-correction accepted for FreeUser. No tokens deducted.")
+                return corrected
 
     def correct_with_llm(self, text):
         """
@@ -73,23 +117,36 @@ class Editor:
                 if choice == "y":
                     final_output.extend(corrected_words[j1:j2])
                     accepted_suggestions += 1  # Count this as an accepted change
+
+                    # Store accepted correction
+                    if hasattr(self.user, 'accepted_corrections'):
+                        self.user.accepted_corrections.append((
+                            " ".join(original_words[i1:i2]),
+                            " ".join(corrected_words[j1:j2])
+                        ))
                 else:
                     final_output.extend(original_words[i1:i2])
 
         # Token deduction based on accepted suggestions
-        if hasattr(self.user, 'token_manager'):
-            if accepted_suggestions > 0:
-                if self.user.token_manager.deduct_tokens(accepted_suggestions):
-                    merged_text = " ".join(final_output)
-                    self.user.record_correction(text, merged_text)
-                    print(f"\n✅ Final version saved. {accepted_suggestions} tokens deducted.")
-                    return merged_text
-                else:
-                    print("❌ Not enough tokens. Changes discarded.")
-                    return text
+        if accepted_suggestions == 0:
+            print("🚫 No suggestions accepted. No tokens deducted.")
+            return text
+
+        merged_text = " ".join(final_output)
+
+        if isinstance(self.user, PaidUser):
+            if self.user.token_manager.deduct_tokens(accepted_suggestions):
+                self.user.record_correction(text, merged_text)
+                print(f"\n✅ Final version saved. {accepted_suggestions} tokens deducted.")
+                return merged_text
             else:
-                print("🚫 No suggestions accepted. No tokens deducted.")
+                print("❌ Not enough tokens. Changes discarded.")
                 return text
+        else:
+            # FreeUser path: no charge
+            self.user.record_correction(text, merged_text)
+            print(f"\n✅ Final version saved for FreeUser. No tokens deducted.")
+            return merged_text
         
     def submit_and_correct(self, text):
         """
@@ -118,19 +175,115 @@ class Editor:
 
         # Step 2: LLM Correction
         return self.correct_with_llm(filtered_text)
+    
+    def save_text_to_file(self, text, filename="corrected_output.txt"):
+        """
+        Saves corrected text to a file if user has enough tokens.
+        Costs 5 tokens.
+        """
+        if isinstance(self.user, PaidUser) and self.user.token_manager.deduct_tokens(5):
+            try:
+                with open(filename, 'w', encoding='utf-8') as f:
+                    f.write(text)
+                print(f"💾 Text saved to '{filename}'. 5 tokens deducted.")
+                return True
+            except Exception as e:
+                print("❌ Failed to save file:", e)
+                return False
+        else:
+            print("❌ Not enough tokens to save the file.")
+            return False
+        
+    def free_user_workflow(self, text):
+        """
+        Handles FreeUser-only correction flow:
+        - No token logic
+        - No file saving
+        - No submission charges
+        """
+        # Step 1: Check eligibility
+        if not isinstance(self.user, FreeUser):
+            print("❌ This flow is only for FreeUsers.")
+            return
 
+        # Step 2: Blacklist filtering
+        filtered_text, cost = filter_blacklisted_words(text)
+        print(f"\n🛡️ Filtered text:\n{filtered_text}")
+
+        # Step 3: Offer correction method
+        print("\nChoose correction mode:")
+        print("1. LLM Correction")
+        print("2. Self-Correction")
+        mode = input("Enter choice (1/2): ").strip()
+
+        if mode == "1":
+            corrected = self.correct_with_llm(filtered_text)
+        elif mode == "2":
+            corrected = self.self_correction_mode(filtered_text)
+        else:
+            print("⚠️ Invalid input.")
+            return
+
+        # Final output
+        print("\n📝 Final corrected text:\n", corrected)
 
 
 if __name__ == "__main__":
-    from user import PaidUser
+    from user import PaidUser, FreeUser
 
-    print(" OopsFix Editor Test\n")
-    test_user = PaidUser("Bob", tokens=50)
-    editor = Editor(test_user)
+    """
+    print("🧪 Testing FreeUser\n")
+    user = FreeUser("FreeGuy")
+    editor = Editor(user)
 
-    text = input("Enter text to correct:\n")
-    final = editor.submit_and_correct(text)
+    while True:
+        text = input("\n🔤 Enter text (max 20 words, or 'exit' to quit):\n").strip()
+        if text.lower() == "exit":
+            break
 
-    print("\n Final Output:\n", final)
-    print("Remaining tokens:", test_user.tokens)
+        if user.can_submit(text):
+            editor.free_user_workflow(text)
+    """
+    
+    print("🧪 Testing Editor with PaidUser (100 tokens)\n")
+
+    # Setup: PaidUser with 100 tokens
+    user = PaidUser("TestUser", tokens=100)
+    editor = Editor(user)
+
+    # Prompt for text
+    original_text = input("🔤 Enter your original text:\n")
+
+    # Ask for correction mode
+    print("\nChoose correction mode:")
+    print("1. LLM Correction")
+    print("2. Self-Correction")
+    mode = input("Enter choice (1/2): ").strip()
+
+    if mode == "1":
+        corrected = editor.submit_and_correct(original_text)
+
+        # Offer save
+        save = input("\n💾 Save corrected text to file for 5 tokens? (y/n): ").strip().lower()
+        if save == "y":
+            filename = input("Enter filename (default: corrected_output.txt): ").strip() or "corrected_output.txt"
+            editor.save_text_to_file(corrected, filename)
+
+    elif mode == "2":
+        corrected = editor.self_correction_mode(original_text)
+
+        # Offer save
+        save = input("\n💾 Save self-corrected text to file for 5 tokens? (y/n): ").strip().lower()
+        if save == "y":
+            filename = input("Enter filename (default: self_corrected.txt): ").strip() or "self_corrected.txt"
+            editor.save_text_to_file(corrected, filename)
+
+    else:
+        print("⚠️ Invalid choice. Exiting.")
+
+    # Show history and balance
+    print("\n📚 Correction History:")
     editor.display_corrections()
+    print(f"💰 Final token balance: {user.tokens}") 
+    
+

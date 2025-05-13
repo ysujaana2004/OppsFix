@@ -7,6 +7,7 @@ class User:
         self.name = name
         self.corrections = []
         self.submissions = []
+        self.final_texts = []   # Store final corrected texts
 
     def record_correction(self, original, corrected):
         self.corrections.append((original, corrected))

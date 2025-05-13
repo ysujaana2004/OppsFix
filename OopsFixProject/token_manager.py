@@ -3,6 +3,10 @@ import time
 class TokenManager:
     def __init__(self, user):
         self.user = user
+    
+    # access tokens
+    def get_tokens(self):
+        return self._tokens
 
     # check if user has <cost> tokens
     def has_tokens(self, cost):

@@ -1,0 +1,22 @@
+{
+  "ad1be23f-2943-4df3-b04e-6d0b6f82f2e8": {
+    "complainant": "alice",
+    "defendant": "bob",
+    "text_id": "text_123",
+    "reason": "Edited the file without asking",
+    "response": "I thought I had permission.",
+    "status": "resolved",
+    "super_user_resolution": "bob",
+    "token_penalty": 5
+  },
+  "abd1b9a7-07ac-4ddb-81a0-3a58b79d5b0e": {
+    "complainant": "alice",
+    "defendant": "bob",
+    "text_id": "text_full_001",
+    "reason": "Deleted a paragraph without asking.",
+    "response": "I thought it was a mistake.",
+    "status": "resolved",
+    "super_user_resolution": "bob",
+    "token_penalty": 3
+  }
+}

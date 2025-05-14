@@ -62,44 +62,22 @@ class Editor:
             not getattr(self.user, 'corrections', [])):
             print("No corrections recorded.")
 
-    def self_correction_mode(self, original_text):
-        print("\nSelf-Correction Mode:")
-        print("Original:\n", original_text)
-        print("\nMake your corrections below:\n")
-
-        corrected = input("Corrected Version:\n").strip()
-        if not corrected:
-            print("⚠️ No correction entered.")
-            return original_text
-
-        orig_words = original_text.strip().split()
-        corr_words = corrected.strip().split()
-        sm = difflib.SequenceMatcher(None, orig_words, corr_words)
-        diffs = [tag for tag, _, _, _, _ in sm.get_opcodes() if tag != "equal"]
-        num_changes = len(diffs)
-        cost = math.ceil(num_changes * 0.5)
-
-        if num_changes == 0:
-            print("✅ No changes detected. No tokens charged.")
-            return original_text
-
-        if isinstance(self.user, PaidUser):
-            if self.user.token_manager.deduct_tokens(cost):
-                self.user.record_correction(original_text, corrected)
-                if hasattr(self.user, 'final_texts'):
-                    self.user.final_texts.append(corrected)
-                print(f"✅ Self-correction accepted. {cost} tokens deducted.")
-                print("\n📝 Final Corrected Text:\n", corrected)
-                return corrected
-            else:
-                print("❌ Not enough tokens for self-correction.")
-                return original_text
+    def self_correction_mode(self, original_text, corrected_text=None):
+        """
+        Handle self-correction mode
+        @param original_text: Original text to correct
+        @param corrected_text: Corrected version (for GUI mode)
+        @return: Corrected text
+        """
+        if corrected_text is not None:
+            # GUI mode
+            return corrected_text
         else:
-            self.user.record_correction(original_text, corrected)
-            if hasattr(self.user, 'final_texts'):
-                self.user.final_texts.append(corrected)
-            print("✅ Self-correction accepted for FreeUser. No tokens deducted.")
-            print("\n📝 Final Corrected Text:\n", corrected)
+            # CLI mode - keep existing implementation
+            print("Self-Correction Mode:")
+            print("Original:\n", original_text)
+            print("\nMake your corrections below:")
+            corrected = input("Corrected Version:\n").strip()
             return corrected
 
     def correct_with_llm(self, text):

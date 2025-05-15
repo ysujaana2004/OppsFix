@@ -1,4 +1,5 @@
 import tkinter as tk
+import time
 from tkinter import simpledialog, messagebox, scrolledtext, filedialog
 from users.free_user import FreeUser
 from users.paid_user import PaidUser
@@ -12,6 +13,9 @@ from services.user_manager import save_user, load_user
 from services.file_loader import load_text_from_file
 from services.complaint_handler import ComplaintHandler
 from services.rejection_review_handler import RejectionReviewHandler
+from services.blacklist_review_handler import BlacklistReviewHandler
+from services.statistics import get_user_statistics
+
 
 import os
 import json
@@ -78,54 +82,126 @@ class LLMEditorApp:
 
         tk.Button(self.root, text="Login as Free User", command=self.login_free).pack()
         tk.Button(self.root, text="Login as Paid User", command=self.login_paid).pack()
+        tk.Button(self.root, text="Login as SuperUser", command=self.login_super).pack()
 
     def login_free(self):
         username = self.username_entry.get()
         user = load_user(username)
         if not user:
             user = FreeUser(username)
+        else:
+            now = time.time()
+            if user.user_type == "free" and now - user.last_login_time < 180:
+                wait = int(180 - (now - user.last_login_time))
+                messagebox.showerror("Access Denied", f"You’ve been locked out for submitting too many words.\nTry again in {wait} seconds.")
+                return
         self.user = user
         self.create_main_screen()
 
     def login_paid(self):
         username = self.username_entry.get()
         user = load_user(username)
+
         if not user:
+            # User doesn't exist yet — offer to create
+            create = messagebox.askyesno("Create Account", f"No account found for '{username}'. Create a new paid account?")
+            if not create:
+                return
+            password = simpledialog.askstring("Set Password", "Create a password for your paid account:")
+            if not password:
+                return
+            from users.paid_user import PaidUser
             user = PaidUser(username)
-            user.tokens = 50
+            user.tokens = 20
+            user.password = password
+            save_user(user)
+            messagebox.showinfo("Account Created", f"Paid account '{username}' created successfully.")
+        else:
+            if user.user_type != "paid":
+                messagebox.showerror("Error", "This user is not a paid user.")
+                return
+            password = simpledialog.askstring("Password", "Enter your password:")
+            if password != user.password:
+                messagebox.showerror("Error", "Incorrect password.")
+                return
+
         self.user = user
         self.create_main_screen()
+
+
+    def login_super(self):
+        username = self.username_entry.get()
+        user = load_user(username)
+        if not user:
+            from users.super_user import SuperUser
+            user = SuperUser(username)
+        self.user = user
+        self.create_main_screen()
+
 
     def create_main_screen(self):
         for widget in self.root.winfo_children():
             widget.destroy()
 
         tk.Label(self.root, text=f"Welcome {self.user.username} ({self.user.user_type})").pack()
+
         if self.user.user_type == "paid":
-            self.token_label = tk.Label(self.root, text=f"Tokens: {self.user.tokens}")
-            self.token_label.pack()
+            # Premium UI panel for paid users
+            stats_frame = tk.Frame(self.root, bg="#f0f4f8", bd=2, relief=tk.GROOVE, padx=10, pady=5)
+            stats_frame.pack(fill=tk.X, pady=5)
+
+            # Calculate stats
+            total_texts = len(self.user.text_history)
+            llm_corrections = sum(1 for c in self.user.corrections if c["method"].lower() == "llm")
+            self_corrections = sum(1 for c in self.user.corrections if c["method"].lower() == "self")
+            remaining_tokens = self.user.tokens
+
+            tk.Label(stats_frame, text="PAID USER DASHBOARD", bg="#f0f4f8", font=("Arial", 12, "bold")).grid(row=0, columnspan=2, pady=2)
+            self.token_label = tk.Label(stats_frame, text=f"Tokens Left: {remaining_tokens}", bg="#f0f4f8", fg="green")
+            self.token_label.grid(row=3, column=0, pady=2)
+
+            self.llm_label = tk.Label(stats_frame, text=f"LLM Corrections: {llm_corrections}", bg="#f0f4f8")
+            self.llm_label.grid(row=1, column=0, sticky='w')
+
+            self.self_label = tk.Label(stats_frame, text=f"Self Corrections: {self_corrections}", bg="#f0f4f8")
+            self.self_label.grid(row=2, column=0, sticky='w')
+
 
         self.text_box = scrolledtext.ScrolledText(self.root, width=60, height=10)
         self.text_box.pack()
 
-        tk.Button(self.root, text="Submit Text", command=self.submit_text).pack()
-        tk.Button(self.root, text="Import from File", command=self.import_text_file).pack()
-        tk.Button(self.root, text="LLM Correction Mode", command=self.llm_correct).pack()
-        tk.Button(self.root, text="Self-Correction Mode", command=self.self_correct).pack()
-        tk.Button(self.root, text="View Corrections", command=self.view_corrections).pack()
-        if self.user.username.lower() == "admin":
-            tk.Button(self.root, text="Review Complaints", command=self.review_complaints_gui).pack()
-            tk.Button(self.root, text="Review LLM Rejections", command=self.review_llm_rejections_gui).pack()
+        # === Core features (Free + Paid) ===
+        if self.user.user_type in ("free", "paid"):
+            tk.Button(self.root, text="Submit Text", command=self.submit_text).pack()
+            tk.Button(self.root, text="Import from File", command=self.import_text_file).pack()
+            tk.Button(self.root, text="LLM Correction Mode", command=self.llm_correct).pack()
+            tk.Button(self.root, text="Self-Correction Mode", command=self.self_correct).pack()
+            tk.Button(self.root, text="Propose Blacklist Word", command=self.submit_blacklist_word_gui).pack()
+
+        # Upgrade to paid button (only for free users)
+        if self.user.user_type == "free":
+            tk.Button(self.root, text="Upgrade to Paid", command=self.upgrade_to_paid_gui).pack()
+
+        # === Paid-only features ===
         if self.user.user_type == "paid":
+            tk.Button(self.root, text="View Corrections", command=self.view_corrections).pack()
             tk.Button(self.root, text="Save Text", command=self.save_text).pack()
             tk.Button(self.root, text="Invite Collaborator", command=self.invite_collaborator).pack()
             tk.Button(self.root, text="View Invitations", command=self.view_invitations).pack()
             tk.Button(self.root, text="Purchase Tokens", command=self.purchase_tokens_gui).pack()
-        tk.Button(self.root, text="View Shared Files", command=self.view_shared_files).pack()
-        tk.Button(self.root, text="View Notifications", command=self.view_notifications).pack()
-        tk.Button(self.root, text="File Complaint", command=self.file_complaint_gui).pack()
-        tk.Button(self.root, text="Respond to Complaints", command=self.respond_to_complaints_gui).pack()
+            tk.Button(self.root, text="View Shared Files", command=self.view_shared_files).pack()
+            tk.Button(self.root, text="View Notifications", command=self.view_notifications).pack()
+            tk.Button(self.root, text="View Usage Stats", command=self.view_statistics_gui).pack()
+
+        # === Superuser-only features ===
+        if self.user.user_type == "super":
+            tk.Button(self.root, text="Review LLM Rejections", command=self.review_llm_rejections_gui).pack()
+            tk.Button(self.root, text="Review Blacklist Requests", command=self.review_blacklist_requests_gui).pack()
+            tk.Button(self.root, text="Review Complaints", command=self.review_complaints_gui).pack()
+
+        # === Common to all ===
         tk.Button(self.root, text="Refresh Tokens", command=self.refresh_user).pack()
+
 
     def import_text_file(self):
         filepath = filedialog.askopenfilename(filetypes=[("Text files", "*.txt")])
@@ -154,8 +230,15 @@ class LLMEditorApp:
 
     def submit_text(self):
         text = self.text_box.get("1.0", tk.END).strip()
-        success, msg, masked = process_text_submission(self.user, text, self.blacklist)
+        success, msg, masked = process_text_submission(self.user, text)
+
+        if not success:
+            messagebox.showerror("Submission Failed", msg)
+            if "logged out for 3 minutes" in msg:
+                self.create_login_screen()  # redirect to login screen
+            return
         messagebox.showinfo("Submission Result", msg)
+
         if success:
             self.submitted_text = masked
             self.text_box.delete("1.0", tk.END)
@@ -563,6 +646,66 @@ class LLMEditorApp:
 
             tk.Button(frame, text="Approve Reason (1 token)", command=make_reviewer(True)).pack(side=tk.LEFT, padx=10)
             tk.Button(frame, text="Reject Reason (5 tokens)", command=make_reviewer(False)).pack(side=tk.RIGHT, padx=10)
+
+    def submit_blacklist_word_gui(self):
+        word = simpledialog.askstring("Blacklist Request", "Enter the word you want to blacklist:")
+        if not word:
+            return
+
+        handler = BlacklistReviewHandler()
+        request_id = handler.submit_request(self.user.username, word.strip())
+        messagebox.showinfo("Submitted", f"Request ID: {request_id}\nYour word will be reviewed by a superuser.")
+
+    def review_blacklist_requests_gui(self):
+        handler = BlacklistReviewHandler()
+        pending = handler.get_pending_requests()
+
+        if not pending:
+            messagebox.showinfo("Review", "No pending blacklist requests.")
+            return
+
+        win = tk.Toplevel(self.root)
+        win.title("Review Blacklist Requests")
+        win.geometry("500x400")
+
+        for rid, r in pending.items():
+            frame = tk.Frame(win, relief=tk.RIDGE, borderwidth=2)
+            frame.pack(padx=10, pady=10, fill=tk.X)
+
+            tk.Label(frame, text=f"User: {r['user']}").pack(anchor='w')
+            tk.Label(frame, text=f"Word: {r['word']}").pack(anchor='w')
+
+            def make_resolver(approve, rid=rid):
+                def resolve():
+                    success, msg = handler.resolve_request(rid, approve)
+                    messagebox.showinfo("Result", msg)
+                    win.destroy()
+                return resolve
+
+            tk.Button(frame, text="Approve", command=make_resolver(True)).pack(side=tk.LEFT, padx=20)
+            tk.Button(frame, text="Reject", command=make_resolver(False)).pack(side=tk.RIGHT, padx=20)
+
+    def view_statistics_gui(self):
+        stats = get_user_statistics(self.user)
+
+        win = tk.Toplevel(self.root)
+        win.title("Usage Statistics")
+        win.geometry("400x300")
+
+        for key, value in stats.items():
+            tk.Label(win, text=f"{key}: {value}", anchor='w').pack(fill=tk.X, padx=10, pady=3)
+
+    def upgrade_to_paid_gui(self):
+        password = simpledialog.askstring("Set Password", "Create a password for your paid account:")
+        if not password:
+            return
+
+        self.user.user_type = "paid"
+        self.user.tokens = 20
+        self.user.password = password
+        save_user(self.user)
+        messagebox.showinfo("Success", "Account upgraded to paid. Password saved.")
+        self.create_main_screen()
 
 
 

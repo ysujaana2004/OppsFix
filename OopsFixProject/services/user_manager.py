@@ -16,7 +16,9 @@ def save_user(user):
             'text_history': user.text_history,
             'corrections': user.corrections,
             'saved_texts': getattr(user, 'saved_texts', []),
-            'whitelist': getattr(user, 'whitelist', [])
+            'whitelist': getattr(user, 'whitelist', []),
+            'last_login_time': getattr(user, 'last_login_time', 0),
+            'password': getattr(user, 'password', None)
         }, f, indent=2)
 
 def load_user(username):
@@ -31,11 +33,16 @@ def load_user(username):
         user = PaidUser(data['username'])
         user.tokens = data.get('tokens', 0)
         user.saved_texts = data.get('saved_texts', [])
+    elif data['user_type'] == 'super':
+        from users.super_user import SuperUser
+        user = SuperUser(data['username'])
     else:
         user = FreeUser(data['username'])
 
     user.text_history = data.get('text_history', [])
     user.corrections = data.get('corrections', [])
     user.whitelist = data.get("whitelist", [])
+    user.last_login_time = data.get('last_login_time', 0)
+    user.password = data.get("password", None)
 
     return user

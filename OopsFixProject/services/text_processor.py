@@ -1,6 +1,9 @@
 # services/text_processor.py
 
 import re
+import json
+import time
+from services.user_manager import save_user
 
 class TextProcessor:
     def __init__(self, blacklist=None):
@@ -30,35 +33,56 @@ class TextProcessor:
 
         return masked_text, total_chars, found_words
     
-def process_text_submission(user, text, blacklist):
-    from services.token_manager import TokenManager
+def load_blacklist():
+    try:
+        with open("data/blacklist.json", "r") as f:
+            return json.load(f)
+    except Exception:
+        return []
 
-    # Step 1: Word count & enforce FreeUser limit
+def process_text_submission(user, text):
     words = text.strip().split()
     word_count = len(words)
 
-    if user.user_type == 'free' and word_count > 20:
-        return False, "Free users can only submit up to 20 words.", None
+    # Free user word limit check
+    if user.user_type == "free" and word_count > 20:
+        user.last_login_time = time.time()
+        save_user(user)
+        return False, "Free users can only submit up to 20 words. You’ve been logged out for 3 minutes.", None
 
-    # Step 2: Paid user token charge for word count
-    if user.user_type == 'paid':
-        tm = TokenManager(user)
-        success, msg = tm.apply_text_submission_cost(word_count)
-        if not success:
-            return False, msg, None
+    is_paid = user.user_type == "paid"
+    blacklist = load_blacklist()
+    masked_text = []
+    penalty = 0
 
-    # Step 3: Blacklist replacement
-    tp = TextProcessor(blacklist)
-    masked_text, penalty, found = tp.mask_blacklisted_words(text)
+    if is_paid:
+        if user.tokens < word_count:
+            penalty = user.tokens // 2
+            user.tokens -= penalty
+            save_user(user)
+            return False, f"Not enough tokens to submit ({word_count} needed). {penalty} tokens deducted as penalty.", None
+        else:
+            user.tokens -= word_count  # base cost: 1 token per word
 
-    # Step 4: Deduct blacklist penalty (paid only)
-    if user.user_type == 'paid':
-        tm.apply_blacklist_penalty(penalty)
+    for word in words:
+        clean = word.strip('.,!?')
+        if clean.lower() in blacklist:
+            masked_word = '*' * len(clean)
+            penalty += len(clean) if is_paid else 0
+            masked_text.append(word.replace(clean, masked_word))
+        else:
+            masked_text.append(word)
 
-    # Step 5: Save to history
-    user.add_text_history(masked_text)
+    final_text = " ".join(masked_text)
 
-    return True, f"Submission successful. {penalty} token penalty for blacklist words.", masked_text
+    if is_paid:
+        if user.tokens < penalty:
+            return False, "Not enough tokens for blacklisted words.", final_text
+        user.tokens -= penalty
+        save_user(user)
+
+    return True, f"Text submitted successfully. Penalty: {penalty} tokens for blacklist.", final_text
+
 
 
 

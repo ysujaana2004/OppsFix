@@ -1,0 +1,33 @@
+{
+  "username": "free",
+  "user_type": "free",
+  "tokens": 0,
+  "text_history": [],
+  "corrections": [
+    {
+      "method": "llm",
+      "original": "hi,",
+      "corrected": "Hi,",
+      "diffs": [
+        {
+          "from": "hi,",
+          "to": "Hi,"
+        }
+      ]
+    },
+    {
+      "method": "llm",
+      "original": "verry",
+      "corrected": "am very",
+      "diffs": [
+        {
+          "from": "verry",
+          "to": "am very"
+        }
+      ]
+    }
+  ],
+  "saved_texts": [],
+  "whitelist": [],
+  "last_login_time": 1747316848.723134
+}

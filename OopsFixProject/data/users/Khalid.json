@@ -1,0 +1,41 @@
+{
+  "username": "Khalid",
+  "user_type": "paid",
+  "tokens": 69,
+  "text_history": [
+    "I am veery happy today.",
+    "I am veery happy today because it is Friday.",
+    "I am veery happy today because it's Friday.",
+    "I am veery happy today because it's Friday, and the weather is reaally nice.",
+    "I am so haapy today.",
+    "I am so haapy today."
+  ],
+  "corrections": [
+    {
+      "method": "llm",
+      "original": "reaally",
+      "corrected": "really",
+      "diffs": [
+        {
+          "from": "reaally",
+          "to": "really"
+        }
+      ]
+    },
+    {
+      "method": "llm",
+      "original": "haapy",
+      "corrected": "happy",
+      "diffs": [
+        {
+          "from": "haapy",
+          "to": "happy"
+        }
+      ]
+    }
+  ],
+  "saved_texts": [],
+  "whitelist": [
+    "haapy"
+  ]
+}

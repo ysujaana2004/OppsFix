@@ -18,5 +18,45 @@
     "status": "resolved",
     "super_user_resolution": "bob",
     "token_penalty": 3
+  },
+  "adcfa5ea-4fb8-43cd-a18b-96d572cccdf7": {
+    "complainant": "Alice",
+    "defendant": "Bob",
+    "text_id": "shared_file.txt",
+    "reason": "Edited the file without asking",
+    "response": "I thought I had permission.",
+    "status": "resolved",
+    "super_user_resolution": "Bob",
+    "token_penalty": 5
+  },
+  "74bd0287-d8a4-4be3-a8bc-12cf5c96dbc7": {
+    "complainant": "Alice",
+    "defendant": "Khalid",
+    "text_id": "shared.txt",
+    "reason": "messed with my files",
+    "response": "ran away and didn't answer",
+    "status": "resolved",
+    "super_user_resolution": "Khalid",
+    "token_penalty": 7
+  },
+  "770622f6-216f-41f0-807b-7ea0939706ce": {
+    "complainant": "Alice",
+    "defendant": "Khalid",
+    "text_id": "comp.txt",
+    "reason": "messed w my stuff",
+    "response": "No I didn't",
+    "status": "resolved",
+    "super_user_resolution": "Alice",
+    "token_penalty": 4
+  },
+  "9cda4fd5-48b4-45c7-a2d9-5224b8343003": {
+    "complainant": "Alice",
+    "defendant": "Khalid",
+    "text_id": "shit.txt",
+    "reason": "eohfo",
+    "response": "efuehron",
+    "status": "resolved",
+    "super_user_resolution": "Alice",
+    "token_penalty": 4
   }
 }

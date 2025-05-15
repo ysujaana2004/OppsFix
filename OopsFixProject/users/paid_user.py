@@ -96,3 +96,12 @@ class PaidUser(User):
     def add_bonus_tokens(self, amount=3):
         self.tokens += amount
 
+    def overwrite_shared_file(self, filename, new_text):
+        path = f"data/texts/{filename}"
+        try:
+            with open(path, 'w') as f:
+                f.write(new_text)
+            return True, f"Shared file '{filename}' updated successfully."
+        except Exception as e:
+            return False, f"Failed to update shared file: {e}"
+

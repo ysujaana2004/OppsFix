@@ -12,7 +12,7 @@ class User:
         self.tokens = 0                        # only relevant to paid users
         self.text_history = []                 # list of past submitted texts
         self.corrections = []                  # history of LLM/self corrections
-        self.whitelist = set()
+        self.whitelist = []                    # list of whitelisted words (shouldn't be labelled as wrong)
 
     def can_login(self):
         """

@@ -4,6 +4,9 @@ import json
 import os
 import uuid
 
+from users.paid_user import PaidUser
+from services.user_manager import load_user, save_user
+
 COMPLAINT_FILE = "data/complaints.json"
 
 class ComplaintHandler:
@@ -60,6 +63,15 @@ class ComplaintHandler:
         if complaint_id not in data:
             return False, "Invalid complaint ID."
 
+        # Deduct tokens from actual user object
+        user = load_user(punished_user)
+        if user and hasattr(user, 'tokens'):
+            user.tokens = max(0, user.tokens - penalty_amount)
+            save_user(user)
+        else:
+            return False, "User not found or cannot be penalized."
+
+        # Record resolution in complaint file
         data[complaint_id]['status'] = "resolved"
         data[complaint_id]['super_user_resolution'] = punished_user
         data[complaint_id]['token_penalty'] = penalty_amount

@@ -3,6 +3,9 @@
 import json
 import os
 
+from users.paid_user import PaidUser
+from services.user_manager import load_user, save_user
+
 COLLAB_FILE = "data/collabs.json"
 
 class CollaborationService:
@@ -72,3 +75,46 @@ class CollaborationService:
 
     def is_collaborator(self, text_id, username):
         return username in self.get_collaborators(text_id)
+    
+def get_shared_files_for_user(username):
+    data = CollaborationService()._load_data()
+    shared = []
+    for text_id, entry in data.items():
+        for c in entry['collaborators']:
+            if c['username'] == username and c['status'] == 'accepted':
+                shared.append(text_id)
+    return shared
+
+def get_all_shared_files(username):
+    """
+    Returns all files shared with or by this user where the user is either:
+    - the owner of the file, or
+    - an accepted collaborator
+    """
+    cs = CollaborationService()
+    data = cs._load_data()
+    shared = []
+
+    for text_id, entry in data.items():
+        if entry['owner'] == username:
+            shared.append(text_id)
+            continue
+        for c in entry['collaborators']:
+            if c['username'] == username and c['status'] == 'accepted':
+                shared.append(text_id)
+                break
+
+    return shared
+
+
+def penalize_inviter_on_rejection(text_id):
+    cs = CollaborationService()
+    data = cs._load_data()
+    if text_id in data:
+        inviter = data[text_id]['owner']
+        user = load_user(inviter)
+        if isinstance(user, PaidUser):
+            user.tokens = max(0, user.tokens - 3)
+            save_user(user)  # Persist the penalty
+        return inviter
+    return None

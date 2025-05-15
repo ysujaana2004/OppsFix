@@ -3,53 +3,40 @@
 from services.llm_handler import LLMHandler
 
 def review_llm_corrections(user, original_text, corrected_text):
-    llm = LLMHandler(user.whitelist)
-    diffs = llm.compare_texts(original_text, corrected_text)
+    """
+    Compare original and corrected text and return a list of changes for GUI display.
+    Does NOT automatically apply any token deduction.
+    """
+    from difflib import SequenceMatcher
 
-    accepted_text = []
-    tokens_used = 0
+    original_words = original_text.strip().split()
+    corrected_words = corrected_text.strip().split()
+
+    matcher = SequenceMatcher(None, original_words, corrected_words)
     changes = []
 
-    for orig, corr, changed in diffs:
-        if not changed or llm.is_whitelisted(orig):
-            accepted_text.append(corr)
-            continue
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag in ["replace", "delete", "insert"]:
+            original_segment = " ".join(original_words[i1:i2])
+            corrected_segment = " ".join(corrected_words[j1:j2])
+            changes.append({
+                "tag": tag,
+                "original_start": i1,
+                "original_end": i2,
+                "corrected_start": j1,
+                "corrected_end": j2,
+                "from": original_segment,
+                "to": corrected_segment
+            })
+    
+    # Ignore words which are in whitelist (user marked as correct)
+    if hasattr(user, "whitelist"):
+        changes = [c for c in changes if c["from"] not in user.whitelist]
 
-        print(f"\nSuggested Correction: {orig} → {corr}")
-        decision = input("Accept this correction? (y/n): ").strip().lower()
+    # Return original, corrected, and diffs for GUI-based handling
+    return {
+        "original": original_text,
+        "corrected": corrected_text,
+        "diffs": changes
+    }
 
-        if decision == 'y':
-            accepted_text.append(corr)
-            tokens_used += 1
-            changes.append({'from': orig, 'to': corr})
-        else:
-            reason = input("Reason for rejecting? (leave empty to skip): ").strip()
-            save_to_whitelist = input(f"Add '{orig}' to whitelist? (y/n): ").strip().lower()
-            if save_to_whitelist == 'y':
-                llm.add_to_whitelist(orig)
-                print(f"'{orig}' added to whitelist.")
-            accepted_text.append(orig)
-
-    # Token logic
-    if user.user_type == 'paid':
-        user.tokens -= tokens_used
-        if user.tokens < 0:
-            user.tokens = 0
-
-    final_text = " ".join(accepted_text)
-
-    # Bonus: ≥10 words, no edits
-    if user.user_type == 'paid' and tokens_used == 0 and len(original_text.split()) >= 10:
-        user.tokens += 3
-        print("Bonus: No corrections needed. 3 tokens awarded.")
-
-    user.corrections.append({
-        'original': original_text,
-        'corrected': final_text,
-        'method': 'llm',
-        'diffs': changes
-    })
-
-    print(f"\nReview complete. {tokens_used} tokens deducted.")
-    print(f"Final Corrected Text:\n{final_text}\n")
-    return final_text, tokens_used

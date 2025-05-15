@@ -22,5 +22,13 @@
     "reason": "dumb",
     "status": "pending",
     "penalty": null
+  },
+  "1e07d326-800c-4c6a-90b1-bf02108a19a0": {
+    "user": "",
+    "original": "",
+    "suggested": ". .",
+    "reason": "dumb",
+    "status": "pending",
+    "penalty": null
   }
 }

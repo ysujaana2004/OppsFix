@@ -36,7 +36,7 @@ class TextProcessor:
 def load_blacklist():
     try:
         with open("data/blacklist.json", "r") as f:
-            return json.load(f)
+            return [w.strip().lower() for w in json.load(f)]
     except Exception:
         return []
 

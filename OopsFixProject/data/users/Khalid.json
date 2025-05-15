@@ -1,7 +1,7 @@
 {
   "username": "Khalid",
   "user_type": "paid",
-  "tokens": 61,
+  "tokens": 19,
   "text_history": [
     "I am veery happy today.",
     "I am veery happy today because it is Friday.",
@@ -38,5 +38,7 @@
   "saved_texts": [],
   "whitelist": [
     "haapy"
-  ]
+  ],
+  "last_login_time": 0,
+  "password": null
 }

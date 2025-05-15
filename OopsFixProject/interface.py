@@ -7,6 +7,7 @@ from services.llm_handler import LLMHandler
 from services.review_manager import review_llm_corrections
 from services.self_correction import handle_self_correction
 from services.text_processor import process_text_submission, TextProcessor
+from services.statistics import correction_stats
 import os
 
 class LLMEditorApp:
@@ -81,6 +82,9 @@ class LLMEditorApp:
         self.text_box.delete("1.0", tk.END)
         self.text_box.insert(tk.END, final)
         self.update_tokens()
+        # Show statistics popup
+        self.show_correction_stats(self.submitted_text, final)
+        self.submitted_text = final  # Update for further corrections
 
     def self_correct(self):
         if not self.submitted_text:
@@ -90,6 +94,9 @@ class LLMEditorApp:
         success, msg = handle_self_correction(self.user, self.submitted_text, corrected)
         messagebox.showinfo("Self Correction", msg)
         self.update_tokens()
+        if success:
+            self.show_correction_stats(self.submitted_text, corrected)
+            self.submitted_text = corrected  # Update for further corrections
 
     def save_text(self):
         filename = simpledialog.askstring("Save File", "Enter filename (e.g., output.txt):")
@@ -125,6 +132,17 @@ class LLMEditorApp:
     def update_tokens(self):
         if self.token_label:
             self.token_label.config(text=f"Tokens: {self.user.tokens}")
+    
+    def show_correction_stats(self, original, corrected):
+        stats = correction_stats(original, corrected)
+        stats_message = (
+            f"Correction Statistics:\n"
+            f"Words changed: {stats['words_changed']} / {stats['total_words']} "
+            f"({stats['percent_words_changed']}%)\n"
+            f"Characters changed: {stats['chars_changed']} / {stats['total_chars']} "
+            f"({stats['percent_chars_changed']}%)"
+        )
+        messagebox.showinfo("Correction Statistics", stats_message)
 
 if __name__ == "__main__":
     root = tk.Tk()

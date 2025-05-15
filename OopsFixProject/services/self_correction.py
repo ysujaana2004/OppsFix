@@ -20,21 +20,30 @@ def compare_texts(original, corrected):
     return changes
 
 def handle_self_correction(user, original, corrected):
-    """
-    Applies self-correction logic:
-    - Compares versions
-    - Charges 0.5 tokens per correction
-    - Updates user correction history
-    """
     changed_words = compare_texts(original, corrected)
-
     if changed_words == 0:
         return False, "No corrections detected — no tokens deducted."
 
-    charge = int(changed_words * 0.5)
-    user.tokens -= charge
-    if user.tokens < 0:
-        user.tokens = 0
+    charge = int(changed_words * 0.5) if user.user_type == 'paid' else 0
+    if user.user_type == 'paid':
+        user.tokens -= charge
+        if user.tokens < 0:
+            user.tokens = 0
 
-    user.add_correction(original, corrected, method='self')
+    # Generate diffs
+    orig_words = original.strip().split()
+    corr_words = corrected.strip().split()
+    diffs = []
+    for o, c in zip(orig_words, corr_words):
+        if o != c:
+            diffs.append({'from': o, 'to': c})
+
+    user.corrections.append({
+        'original': original,
+        'corrected': corrected,
+        'method': 'self',
+        'diffs': diffs
+    })
+
     return True, f"{changed_words} words corrected. {charge} tokens deducted."
+

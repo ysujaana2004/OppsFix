@@ -6,6 +6,7 @@ from services.token_manager import TokenManager
 from services.llm_handler import LLMHandler
 from services.review_manager import review_llm_corrections
 from services.self_correction import handle_self_correction
+from services.text_processor import process_text_submission, TextProcessor
 import os
 
 class LLMEditorApp:
@@ -15,6 +16,8 @@ class LLMEditorApp:
         self.user = None
         self.text_box = None
         self.token_label = None
+        self.blacklist = ['go', 'store']  # Example blacklist
+        self.submitted_text = None
         self.create_login_screen()
 
     def create_login_screen(self):
@@ -52,38 +55,39 @@ class LLMEditorApp:
         self.text_box.pack()
 
         tk.Button(self.root, text="Submit Text", command=self.submit_text).pack()
+        tk.Button(self.root, text="LLM Correction Mode", command=self.llm_correct).pack()
+        tk.Button(self.root, text="Self-Correction Mode", command=self.self_correct).pack()
+        tk.Button(self.root, text="View Corrections", command=self.view_corrections).pack()
         if self.user.user_type == "paid":
-            tk.Button(self.root, text="Use LLM Correction", command=self.llm_correct).pack()
-            tk.Button(self.root, text="Self-Correct and Submit", command=self.self_correct).pack()
             tk.Button(self.root, text="Save Text", command=self.save_text).pack()
 
     def submit_text(self):
         text = self.text_box.get("1.0", tk.END).strip()
-        if self.user.user_type == "free":
-            success, msg = self.user.submit_text(text)
-            messagebox.showinfo("Submission Result", msg)
-        else:
-            tm = TokenManager(self.user)
-            word_count = len(text.split())
-            success, msg = tm.apply_text_submission_cost(word_count)
-            messagebox.showinfo("Submission Result", msg)
-            if success:
-                self.user.add_text_history(text)
-            self.update_tokens()
+        success, msg, masked = process_text_submission(self.user, text, self.blacklist)
+        messagebox.showinfo("Submission Result", msg)
+        if success:
+            self.submitted_text = masked
+            self.text_box.delete("1.0", tk.END)
+            self.text_box.insert(tk.END, masked)
+        self.update_tokens()
 
     def llm_correct(self):
-        original = self.text_box.get("1.0", tk.END).strip()
+        if not self.submitted_text:
+            messagebox.showinfo("Error", "Please submit text first.")
+            return
         llm = LLMHandler(self.user.whitelist)
-        corrected = llm.correct_text(original)
-        final, tokens_used = review_llm_corrections(self.user, original, corrected)
+        corrected = llm.correct_text(self.submitted_text)
+        final, tokens_used = review_llm_corrections(self.user, self.submitted_text, corrected)
         self.text_box.delete("1.0", tk.END)
         self.text_box.insert(tk.END, final)
         self.update_tokens()
 
     def self_correct(self):
-        original = simpledialog.askstring("Original Text", "Paste the original text:")
+        if not self.submitted_text:
+            messagebox.showinfo("Error", "Please submit text first.")
+            return
         corrected = self.text_box.get("1.0", tk.END).strip()
-        success, msg = handle_self_correction(self.user, original, corrected)
+        success, msg = handle_self_correction(self.user, self.submitted_text, corrected)
         messagebox.showinfo("Self Correction", msg)
         self.update_tokens()
 
@@ -95,6 +99,28 @@ class LLMEditorApp:
             success, msg = self.user.save_text_file(text, filename)
             messagebox.showinfo("Save Result", msg)
             self.update_tokens()
+
+    def view_corrections(self):
+        if not self.user.corrections:
+            messagebox.showinfo("Corrections", "No corrections yet.")
+            return
+
+        win = tk.Toplevel(self.root)
+        win.title("Correction History")
+        win.geometry("600x400")
+
+        text_widget = scrolledtext.ScrolledText(win, wrap=tk.WORD)
+        text_widget.pack(expand=True, fill=tk.BOTH)
+
+        for idx, entry in enumerate(self.user.corrections, 1):
+            text_widget.insert(tk.END, f"#{idx} | Method: {entry['method'].upper()}\n")
+            text_widget.insert(tk.END, f"Original: {entry['original']}\n")
+            text_widget.insert(tk.END, f"Corrected: {entry['corrected']}\n")
+            if 'diffs' in entry and entry['diffs']:
+                text_widget.insert(tk.END, "Changes:\n")
+                for d in entry['diffs']:
+                    text_widget.insert(tk.END, f"  - {d['from']} → {d['to']}\n")
+            text_widget.insert(tk.END, "---\n\n")
 
     def update_tokens(self):
         if self.token_label:

@@ -1,2 +1,15 @@
 {
+  "fun.txt": {
+    "owner": "Khalid",
+    "collaborators": [
+      {
+        "username": "Alice",
+        "status": "accepted"
+      }
+    ]
+  },
+  "fun1.txt": {
+    "owner": "Khalid",
+    "collaborators": []
+  }
 }

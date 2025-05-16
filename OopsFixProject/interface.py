@@ -192,6 +192,9 @@ class LLMEditorApp:
             tk.Button(self.root, text="View Shared Files", command=self.view_shared_files).pack()
             tk.Button(self.root, text="View Notifications", command=self.view_notifications).pack()
             tk.Button(self.root, text="View Usage Stats", command=self.view_statistics_gui).pack()
+            tk.Button(self.root, text="File Complaint", command=self.file_complaint_gui).pack()
+            tk.Button(self.root, text="Respond to Complaint", command=self.respond_to_complaints_gui).pack()
+
 
         # === Superuser-only features ===
         if self.user.user_type == "super":
@@ -234,6 +237,7 @@ class LLMEditorApp:
 
         if not success:
             messagebox.showerror("Submission Failed", msg)
+            self.update_tokens()
             if "logged out for 3 minutes" in msg:
                 self.create_login_screen()  # redirect to login screen
             return
@@ -254,6 +258,9 @@ class LLMEditorApp:
         llm = LLMHandler(self.user.whitelist)
         corrected_text = llm.correct_text(self.submitted_text)
         result = review_llm_corrections(self.user, self.submitted_text, corrected_text)
+        if result.get("bonus"):
+            messagebox.showinfo("Bonus!", "No errors detected. You’ve earned 3 bonus tokens!")
+            self.update_tokens()
         self.llm_diffs_state = [{"diff": d, "accepted": None} for d in result["diffs"]]
 
         self.submitted_text_words = self.submitted_text.strip().split()

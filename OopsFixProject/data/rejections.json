@@ -1,34 +1,18 @@
 {
-  "f599ffb8-540c-4e4d-8927-80393595ae4d": {
+  "1c85b8cd-dc6d-434d-aa3e-fc650ae645c5": {
     "user": "Khalid",
-    "original": "veery haapy",
-    "suggested": "very happy",
-    "reason": "I use this spelling as a poetic expression.",
+    "original": "noot",
+    "suggested": "not",
+    "reason": "it's dumb",
     "status": "resolved",
     "penalty": 1
   },
-  "ead31dc6-5de8-4c96-899d-4628682a1ad9": {
+  "37a84110-cc90-48b6-a3fc-92e4025b7d22": {
     "user": "Khalid",
-    "original": "",
-    "suggested": "I am so hungry today.",
-    "reason": "I don't want to say that I am hungry",
+    "original": "noot",
+    "suggested": "not",
+    "reason": "dumb",
     "status": "resolved",
-    "penalty": 1
-  },
-  "359eb39f-2fcf-45d3-b2af-0c056ca658ed": {
-    "user": "Khalid",
-    "original": "",
-    "suggested": "I am so hungry today.",
-    "reason": "dumb",
-    "status": "pending",
-    "penalty": null
-  },
-  "1e07d326-800c-4c6a-90b1-bf02108a19a0": {
-    "user": "",
-    "original": "",
-    "suggested": ". .",
-    "reason": "dumb",
-    "status": "pending",
-    "penalty": null
+    "penalty": 5
   }
 }

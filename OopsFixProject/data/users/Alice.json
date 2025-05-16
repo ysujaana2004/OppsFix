@@ -1,8 +1,23 @@
 {
   "username": "Alice",
   "user_type": "paid",
-  "tokens": 12,
+  "tokens": 4,
   "text_history": [],
-  "corrections": [],
-  "saved_texts": []
+  "corrections": [
+    {
+      "method": "llm",
+      "original": "Hiw",
+      "corrected": "How",
+      "diffs": [
+        {
+          "from": "Hiw",
+          "to": "How"
+        }
+      ]
+    }
+  ],
+  "saved_texts": [],
+  "whitelist": [],
+  "last_login_time": 0,
+  "password": "pwd"
 }

@@ -1,6 +1,7 @@
 # services/review_manager.py
 
 from services.llm_handler import LLMHandler
+from services.user_manager import save_user
 
 def review_llm_corrections(user, original_text, corrected_text):
     """
@@ -11,6 +12,7 @@ def review_llm_corrections(user, original_text, corrected_text):
 
     original_words = original_text.strip().split()
     corrected_words = corrected_text.strip().split()
+    word_count = len(original_text.strip().split())
 
     matcher = SequenceMatcher(None, original_words, corrected_words)
     changes = []
@@ -33,10 +35,18 @@ def review_llm_corrections(user, original_text, corrected_text):
     if hasattr(user, "whitelist"):
         changes = [c for c in changes if c["from"] not in user.whitelist]
 
-    # Return original, corrected, and diffs for GUI-based handling
+    # Bonus condition: no diffs and long enough text
+    bonus_awarded = False
+    if user.user_type == "paid" and len(changes) == 0 and word_count > 10:
+        user.tokens += 3
+        bonus_awarded = True
+        save_user(user)
+
     return {
         "original": original_text,
         "corrected": corrected_text,
-        "diffs": changes
+        "diffs": changes,
+        "bonus": bonus_awarded
     }
+
 

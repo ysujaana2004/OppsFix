@@ -1,44 +1,57 @@
 {
   "username": "Khalid",
   "user_type": "paid",
-  "tokens": 19,
-  "text_history": [
-    "I am veery happy today.",
-    "I am veery happy today because it is Friday.",
-    "I am veery happy today because it's Friday.",
-    "I am veery happy today because it's Friday, and the weather is reaally nice.",
-    "I am so haapy today.",
-    "I am so haapy today.",
-    "You are so dumb"
-  ],
+  "tokens": 77,
+  "text_history": [],
   "corrections": [
     {
       "method": "llm",
-      "original": "reaally",
-      "corrected": "really",
+      "original": "fuunny.",
+      "corrected": "funny. \"You are so funny.\"",
       "diffs": [
         {
-          "from": "reaally",
-          "to": "really"
+          "from": "fuunny.",
+          "to": "funny. \"You are so funny.\""
         }
       ]
     },
     {
       "method": "llm",
-      "original": "haapy",
-      "corrected": "happy",
+      "original": "noot",
+      "corrected": "not",
       "diffs": [
         {
-          "from": "haapy",
-          "to": "happy"
+          "from": "noot",
+          "to": "not"
+        }
+      ]
+    },
+    {
+      "original": "You are so funny. I am noot that funny.",
+      "corrected": "You are so funny. I am not thwat fundny.",
+      "method": "self",
+      "diffs": [
+        {
+          "from": "noot",
+          "to": "not"
+        },
+        {
+          "from": "that",
+          "to": "thwat"
+        },
+        {
+          "from": "funny.",
+          "to": "fundny."
         }
       ]
     }
   ],
-  "saved_texts": [],
-  "whitelist": [
-    "haapy"
+  "saved_texts": [
+    "hi.txt",
+    "fun.txt",
+    "fun1.txt"
   ],
+  "whitelist": [],
   "last_login_time": 0,
-  "password": null
+  "password": "pwd"
 }
